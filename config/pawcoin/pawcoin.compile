@@ -1,0 +1,7 @@
+#!/bin/bash    
+# this file contains all commands to compile and install the daemon
+
+wget https://github.com/PawcoinNew/Pawcoin/releases/download/3.4.2/pawcoinv3.4.2-headless.static.tar.gz
+tar -xzf pawcoinv3.4.2-headless.static.tar.gz
+mv pawcoind /usr/local/bin
+mv pawcoin-cli /usr/local/bin

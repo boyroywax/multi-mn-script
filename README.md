@@ -1,146 +1,134 @@
-# Nodemaster
+# Multi Masternode Setup on ip6
 
-The **Nodemaster** scripts is a collection of utilities to manage, setup and update ABET masternode instances.
+## Test Env
+* Digital Ocean 1GB Server
+* Ubuntu 16.04 x64
 
-We are confident this is the single best and almost effortless way to setup multiple ABET masternodes, without bothering too much about the setup part.
+## Script is hit-or-miss
+---
+## Run multi-mn-script
+* https://docs.fix.network/english/fix-masternodes/multiple-masternode-setup-on-one-vps
+```shell
+# Download the script
+git clone https://github.com/boyroywax/multi-mn-script && \
+cd multi-mn-script
+```
+Run the install in tmux (better?)
+```shell
+# Run the script
+tmux
+./install.sh -p pawcoin -c 2 -n "6"
+```
+Allow script to run - takes a while and may crash.
 
-Comparing with building from source manually, you will benefit from using this script in the following way(s):
+Enter the masternode private keys into the conf.  Files located at ```/etc/masternodes```
 
-* 100% auto-compilation and 99% of configuration on the masternode side of things. It is currently only tested on a vultr VPS but should work almost anywhere where IPv6 addresses are available
-* Developed with recent Ubuntu versions in mind, currently only 16.04 is supported
-* Installs 1-100 (or more!) masternodes in parallel on one machine, with individual config and data
-* Compilation is currently from source for the desired git repo tag (configurable via config files)
-  Some security hardening is done, including firewalling and a separate user
-* Automatic startup for all masternode daemons
-* This script needs to run as root, the masternodes will and should not!
-* It's ipv6 enabled, tor/onion will follow
-
-## **Vultr** is highly recommended for this kind of setup
-
-Here is an [easy step-by-step guide for the VPS provider vultr](/docs/vultr-masternode_vps.md) that will guide you through the hardest parts.
-
-## Installation
-
-SSH to your VPS and clone the Github repository:
-
-```bash
-git clone https://github.com/altbet/multi-mn-script.git && cd multi-mn-script
+Start the masternode service script.
+```shell
+/usr/local/bin/activate_masternodes_pawcoin
 ```
 
-Add executable permission to script:
-
-```bash
-chmod +x install.sh
+Check to see if the services are running
+```shell
+systemctl status pawcoin*
 ```
 
-Install & configure your ABET masternode with option:
 
-```bash
-./install.sh -p abet
+---
+## Manual install
+---
+## Create swapfile
+* https://medium.com/@CaveSpectre/multiple-masternodes-one-coin-one-vps-a72832ad5f0e
+I'm pretty sure there are other ways of doing this...
+
+```shell
+# Create swap file
+dd if=/dev/zero of=/swapfile bs=1024 count=6291456 && \
+mkswap /swapfile && \
+chmod 600 /swapfile && \
+swapon /swapfile && \
+echo "/swapfile swap swap defaults 0 0" >> /etc/fstab
+```
+## Add new ipv6 address
+* https://www.digitalocean.com/docs/networking/ipv6/how-to/configure-additional-addresses/
+```text
+## /etc/network/interfaces.d/50-cloud-init.cfg
+iface eth0 inet6 static
+    address 2604:a880:2:d0::118c:1002/64
 ```
 
-## Examples for typical script invocation
+## Each Masternode needs unique rpcport
+Create folder for the configs
+```shell
+mkdir /etc/masternodes
+```
+Create a config file for each masternode
+```shell
+nano pawcoin_n1.conf
+```
+Example config file:
+```text
+## /etc/masternodes/pawcoin_n1.conf
 
-These are only a couple of examples for typical setups. Check our [easy step-by-step guide for [Vultr](/docs/vultr-masternode_vps.md) that will guide you through the hardest parts.
+################################
+# basic settings
+################################
+txindex=1
+logtimestamps=1
+listen=1
+daemon=1
+staking=0
+gen=0
+maxconnections=256
+bind=[2604:a880:2:d0::118c:1002]:8322
+port=8322
 
-**Install & configure 4 ABET masternodes (IPV6):**
+################################
+# masternode specific settings
+################################
+masternode=1
 
-```bash
-./install.sh -p abet -c 4 -n "6"
+################################
+# createmasternodekey 
+################################
+masternodeprivkey=CREATEMASTERNODEKEYgoeshere
+
+#############################
+# optional indices
+#############################
+addressindex=1
+timestampindex=1
+spentindex=1
+
+#############################
+# JSONRPC
+#############################
+server=1
+rpcuser=pawcoinrpc
+rpcpassword=23a8f2058344ab827b156294
+rpcallowip=127.0.0.1
+rpcport=8323
 ```
 
-**Update daemon of previously installed ABET masternodes:**
-
-```bash
-./install.sh -p abet -u -n "6"
+## Copy the blockchain directory
+```shell
+cd .pawcoin  && \
+pawcoin-cli stop && \
+sync && \
+tar cf ../pawcoin.tar && \
+cd .. && \
+mkdir .pawcoin2 && \
+cd .pawcoin2 && \
+tar xf ../pawcoin.tar
 ```
 
-**Install 6 ABET masternodes with the git release tag "tags/v3.4.0.0"**
-
-```bash
-./install.sh -p abet -c 6 -r "tags/v3.4.0.0"
+## Start the nodes
+```shell
+# Start Masternode
+/usr/local/bin/pawcoind -conf=/etc/masternodes/pawcoin_n1.conf -datadir=/root/.pawcoin -daemon
 ```
 
-**Wipe all ABET masternode data:**
-
-```bash
-./install.sh -p abet -w
+## Check the nodes
+```shell
+/usr/local/bin/pawcoind -conf=/etc/masternodes/pawcoin_n1.conf getinfo
 ```
-
-**Install 2 ABET masternodes and configure sentinel monitoring:**
-
-```bash
-./install.sh -p abet -c 2 -s
-```
-
-## Options
-
-The _install.sh_ script support the following parameters:
-
-| Long Option  | Short Option | Values              | description                                                         |
-| :----------- | :----------- | ------------------- | ------------------------------------------------------------------- |
-| --project    | -p           | project, e.g. "abet"| shortname for the project                                           |
-| --net        | -n           | "4" / "6"           | ip type for masternode. (ipv)6 is default                           |
-| --release    | -r           | e.g. "tags/v3.4.0.0"| a specific git tag/branch, defaults to latest tested                |
-| --count      | -c           | number              | amount of masternodes to be configured                              |
-| --update     | -u           | --                  | update specified masternode daemon, combine with -p flag            |
-| --sentinel   | -s           | --                  | install and configure sentinel for node monitoring                  |
-| --wipe       | -w           | --                  | uninstall & wipe all related master node data, combine with -p flag |
-| --help       | -h           | --                  | print help info                                                     |
-| --startnodes | -x           | --                  | starts masternode(s) after installation                             |
-
-## Troubleshooting the masternode on the VPS
-
-If you want to check the status of your masternode, the best way is currently running the cli e.g. for $MUE via
-
-```
-/usr/local/bin/abet-cli -conf=/etc/masternodes/abet_n1.conf getinfo
-
-{
-  "version": 3040000,
-  "protocolversion": 70917,
-  "services": "NETWORK/BLOOM/",
-  "walletversion": 61000,
-  "balance": 0.00000000,
-  "zerocoinbalance": 0.00000000,
-  "blocks": 9252,
-  "timeoffset": 0,
-  "connections": 129,
-  "proxy": "",
-  "difficulty": 22974.76067187333,
-  "testnet": false,
-  "moneysupply": 2007131.13233737,
-  "keypoololdest": 1576539264,
-  "keypoolsize": 1001,
-  "paytxfee": 0.00000000,
-  "relayfee": 0.00010000,
-  "staking status": "Staking Not Active",
-  "errors": ""
-}
-```
-# Helpful Commands
-
-## Start Coin on initial install
-```
-/usr/local/bin/activate_masternodes_abet
-```
-## Stop coin
-```
-/usr/local/bin/abet-cli -conf=/etc/masternodes/abet_n1.conf stop
-```
-## Start Coin
-```
-/usr/local/bin/abetd -conf=/etc/masternodes/abet_n1.conf
-```
-## Getinfo
-```
-/usr/local/bin/abet-cli -conf=/etc/masternodes/abet_n1.conf getinfo
-```
-
-# Help, Issues and Questions
-
-If you will experience issues with **Nodemaster**, don't hestitate to ask us for help in our [support discord channel](https://discord.gg/Ka5K9g5).
-
-# Credits to Author
-
-You can ping him via contact@marsmenschen.com for questions or you can donate him via BTC for this great script: 19U8Jgyb38XnbGyQq3SHXS614pmLbvwKeZ

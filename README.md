@@ -5,7 +5,6 @@
 * Ubuntu 16.04 x64
 
 ## Script is hit-or-miss
----
 ## Run multi-mn-script
 * https://docs.fix.network/english/fix-masternodes/multiple-masternode-setup-on-one-vps
 ```shell
@@ -36,7 +35,6 @@ systemctl status pawcoin*
 
 ---
 ## Manual install
----
 ## Create swapfile
 * https://medium.com/@CaveSpectre/multiple-masternodes-one-coin-one-vps-a72832ad5f0e
 I'm pretty sure there are other ways of doing this...

@@ -103,7 +103,7 @@ spentindex=1
 #############################
 server=1
 rpcuser=pawcoinrpc
-rpcpassword=23a8f2058344ab827b156294
+rpcpassword=samplepasssword
 rpcallowip=127.0.0.1
 rpcport=8323
 ```

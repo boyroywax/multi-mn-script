@@ -1,4 +1,4 @@
-# Multi Masternode Setup on ip6
+# Multi masternode setup using ipv6
 
 ## Test Env
 * Digital Ocean 1GB Server
